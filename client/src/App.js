@@ -1,73 +1,134 @@
-import React, { Component } from "react";
-import SimpleStorageContract from "./contracts/SimpleStorage.json";
-import getWeb3 from "./getWeb3";
+import React, { useState, useEffect } from 'react';
+import PokemonFactoryContract from './contracts/PokemonFactory.json';
+import getWeb3 from './getWeb3';
+import axios from 'axios';
 
-import "./App.css";
+import './App.css';
 
-class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null };
+function App() {
+  const [pkm, setPKM] = useState([]);
+  const [web3, setWeb3] = useState(undefined);
+  const [accounts, setAccounts] = useState(undefined);
+  const [contract, setContract] = useState(undefined);
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const web3 = await getWeb3();
+        // Use web3 to get the user's accounts.
+        const accounts = await web3.eth.getAccounts();
+        // Get the contract instance.
+        const networkId = await web3.eth.net.getId();
+        const deployedNetwork = PokemonFactoryContract.networks[networkId];
+        const instance = new web3.eth.Contract(
+          PokemonFactoryContract.abi,
+          deployedNetwork && deployedNetwork.address
+        );
+        setWeb3(web3);
+        setAccounts(accounts);
+        setContract(instance);
+      } catch (error) {
+        alert('error , read console');
+        console.log(error);
+      }
+    };
+    init();
+  }, []);
 
-  componentDidMount = async () => {
-    try {
-      // Get network provider and web3 instance.
-      const web3 = await getWeb3();
-
-      // Use web3 to get the user's accounts.
-      const accounts = await web3.eth.getAccounts();
-
-      // Get the contract instance.
-      const networkId = await web3.eth.net.getId();
-      const deployedNetwork = SimpleStorageContract.networks[networkId];
-      const instance = new web3.eth.Contract(
-        SimpleStorageContract.abi,
-        deployedNetwork && deployedNetwork.address,
-      );
-
-      // Set web3, accounts, and contract to the state, and then proceed with an
-      // example of interacting with the contract's methods.
-      this.setState({ web3, accounts, contract: instance }, this.runExample);
-    } catch (error) {
-      // Catch any errors for any of the above operations.
-      alert(
-        `Failed to load web3, accounts, or contract. Check console for details.`,
-      );
-      console.error(error);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const response = await contract.methods
+          .getPokemonByOwner(accounts[0])
+          .call();
+        if (response.length !== 0) {
+          let arr = [];
+          for (let e of response) {
+            const pokemon = await getPokemonDetail(e);
+            console.log(pokemon);
+            arr = [...arr, pokemon];
+          }
+          setPKM(arr);
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    if (
+      typeof web3 !== 'undefined' &&
+      typeof contract !== 'undefined' &&
+      typeof accounts !== 'undefined'
+    ) {
+      load();
     }
+  }, [web3, accounts, contract]);
+
+  console.log(122111, accounts);
+
+  const getPokemonDetail = id => {
+    return contract.methods.pokemons(id).call();
   };
 
-  runExample = async () => {
-    const { accounts, contract } = this.state;
+  const handleCreatePokemon = async () => {
+    const RandomNumber = Math.floor(Math.random() * 100) + 1;
+    const baseUrl = 'https://pokeapi.co/api/v2/pokemon/';
 
-    // Stores a given value, 5 by default.
-    await contract.methods.set(5).send({ from: accounts[0] });
+    const pokeData = await axios.get(baseUrl + RandomNumber);
+    const name = pokeData.data.name;
+    const hp = pokeData.data.stats[0].base_stat;
+    const attack = pokeData.data.stats[1].base_stat;
+    const imgUrl = pokeData.data.sprites.front_default;
 
-    // Get the value from the contract to prove it worked.
-    const response = await contract.methods.get().call();
+    await contract.methods
+      ._createPokemon(name, hp, attack, imgUrl)
+      .send({ from: accounts[0] });
+    alert('Create Successful');
+    const response = await contract.methods
+      .getPokemonByOwner(accounts[0])
+      .call();
 
-    // Update state with the result.
-    this.setState({ storageValue: response });
+    if (response.length == 0) {
+      alert('ko co pokemon nao`');
+    }
+
+    let arr = [];
+    for (let e of response) {
+      const pokemon = await getPokemonDetail(e);
+      arr = [...arr, pokemon];
+    }
+    setPKM(arr);
   };
 
-  render() {
-    if (!this.state.web3) {
-      return <div>Loading Web3, accounts, and contract...</div>;
-    }
-    return (
-      <div className="App">
-        <h1>Good to Go!</h1>
-        <p>Your Truffle Box is installed and ready.</p>
-        <h2>Smart Contract Example</h2>
-        <p>
-          If your contracts compiled and migrated successfully, below will show
-          a stored value of 5 (by default).
-        </p>
-        <p>
-          Try changing the value stored on <strong>line 40</strong> of App.js.
-        </p>
-        <div>The stored value is: {this.state.storageValue}</div>
-      </div>
-    );
+  const ethereum = window.ethereum;
+  if (ethereum) {
+    ethereum.on('accountsChanged', function (accounts) {
+      console.log('Ethereum Account Change :', accounts[0]);
+      setAccounts(accounts);
+    });
   }
+
+  return (
+    <div className="App">
+      <div className="Menu">
+        <button onClick={() => handleCreatePokemon()}>Create a Pokemon</button>
+        <button onClick={() => console.log('ready-to-battle')}>Battle</button>
+        <button onClick={() => console.log('Want to sell ur pokemon?')}>
+          Market Place
+        </button>
+      </div>
+      <div className="my-list">
+        {pkm.map(el => {
+          return (
+            <div className="my-list-pkm">
+              <img src={el.imgUrl}></img>
+              <h6>{el.name}</h6>
+              <p> HP : {el.hp}</p>
+              <p> Attack :{el.attack}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default App;

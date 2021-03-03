@@ -1,22 +1,42 @@
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 .App {
-  text-align: center;
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.App-logo {
-  height: 40vmin;
+.Menu {
+  height: 150px;
+  background-color: coral;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+.Menu button {
+  width: 200px;
+  height: 75px;
+  background: green;
+  color: white;
+  border-radius: 5%;
+  cursor: pointer;
+}
+.Menu button:hover {
+  background: greenyellow;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.my-list {
+  background: grey;
+  display: flex;
+  flex-wrap: wrap;
+}
+.my-list-pkm {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #09d3ac;
 }
