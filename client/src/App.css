@@ -30,6 +30,18 @@ body {
   background: greenyellow;
 }
 
+.fight-area {
+  background-color: plum;
+  height: 400px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 35px;
+}
+.fight-area img {
+  width: 150%;
+}
+
 .my-list {
   background: grey;
   display: flex;

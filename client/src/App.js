@@ -10,6 +10,10 @@ function App() {
   const [web3, setWeb3] = useState(undefined);
   const [accounts, setAccounts] = useState(undefined);
   const [contract, setContract] = useState(undefined);
+  const [enemyAddress, setenemyAddress] = useState('');
+  const [pokemonSrc, setpokemonSrc] = useState(null);
+  const [enemyPokemon, setEnemyPokemon] = useState([]);
+  const [eneDisplay, setEneDisplay] = useState(null);
   useEffect(() => {
     const init = async () => {
       try {
@@ -62,10 +66,25 @@ function App() {
     }
   }, [web3, accounts, contract]);
 
-  console.log(122111, accounts);
-
   const getPokemonDetail = id => {
     return contract.methods.pokemons(id).call();
+  };
+
+  // Get Pokemon By Owner Funtion :
+  const getLoadEnemyPokemons = async address => {
+    const response = await contract.methods.getPokemonByOwner(address).call();
+
+    if (response.length !== 0) {
+      let arr = [];
+      for (let e of response) {
+        const pokemon = await getPokemonDetail(e);
+        console.log(pokemon);
+        arr = [...arr, pokemon];
+      }
+      setEnemyPokemon(arr);
+    } else {
+      alert('Enemy has no Pokemon');
+    }
   };
 
   const handleCreatePokemon = async () => {
@@ -86,7 +105,7 @@ function App() {
       .getPokemonByOwner(accounts[0])
       .call();
 
-    if (response.length == 0) {
+    if (response.length === 0) {
       alert('ko co pokemon nao`');
     }
 
@@ -103,23 +122,77 @@ function App() {
     ethereum.on('accountsChanged', function (accounts) {
       console.log('Ethereum Account Change :', accounts[0]);
       setAccounts(accounts);
+      setpokemonSrc(null);
     });
   }
+
+  const showUpPokemon = el => {
+    const element = (
+      <div className="my-list-pkm">
+        <img
+          onClick={() => alert('readyToAttack')}
+          alt=""
+          src={el.imgUrl}
+          title="Choose this Pokemon"
+        ></img>
+
+        <h6>{el.name}</h6>
+        <p> HP : {el.hp}</p>
+        <p> Attack :{el.attack}</p>
+      </div>
+    );
+    setpokemonSrc(element);
+  };
+
+  const readyToBattle = async () => {
+    const enteredName = prompt('Please enter your enemy address');
+    setenemyAddress(enteredName);
+    getLoadEnemyPokemons(enteredName);
+    alert(
+      "Pick up an enemy's Pokemon to Attack , If u attack success, ur pokemon's stats will be increased !!!"
+    );
+  };
 
   return (
     <div className="App">
       <div className="Menu">
         <button onClick={() => handleCreatePokemon()}>Create a Pokemon</button>
-        <button onClick={() => console.log('ready-to-battle')}>Battle</button>
+        <button onClick={() => readyToBattle()}>Battle</button>
         <button onClick={() => console.log('Want to sell ur pokemon?')}>
           Market Place
         </button>
+      </div>
+      <div className="fight-area" id="fight-area">
+        {pokemonSrc}
+        <h1 style={{ color: 'red' }}> VS</h1>
+        {enemyPokemon.map(el => {
+          return (
+            <div className="my-list-pkm">
+              <img
+                onClick={() => showUpPokemon(el)}
+                alt=""
+                src={el.imgUrl}
+                title="Choose this Pokemon"
+              ></img>
+
+              <h6>{el.name}</h6>
+              <p> HP : {el.hp}</p>
+              <p> Attack :{el.attack}</p>
+            </div>
+          );
+        })}
       </div>
       <div className="my-list">
         {pkm.map(el => {
           return (
             <div className="my-list-pkm">
-              <img src={el.imgUrl}></img>
+              <img
+                onClick={() => showUpPokemon(el)}
+                alt=""
+                src={el.imgUrl}
+                title="Choose this Pokemon"
+              ></img>
+
               <h6>{el.name}</h6>
               <p> HP : {el.hp}</p>
               <p> Attack :{el.attack}</p>
