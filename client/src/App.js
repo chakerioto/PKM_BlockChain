@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PokemonFactoryContract from './contracts/PokemonFactory.json';
+import PokemonFeedingContract from './contracts/PokemonFeeding.json';
 import getWeb3 from './getWeb3';
 import axios from 'axios';
 
@@ -10,10 +11,14 @@ function App() {
   const [web3, setWeb3] = useState(undefined);
   const [accounts, setAccounts] = useState(undefined);
   const [contract, setContract] = useState(undefined);
+  const [contract2, setContract2] = useState(undefined);
   const [enemyAddress, setenemyAddress] = useState('');
   const [pokemonSrc, setpokemonSrc] = useState(null);
   const [enemyPokemon, setEnemyPokemon] = useState([]);
   const [eneDisplay, setEneDisplay] = useState(null);
+
+  //Chosen Pokemon :
+  const [chosen, setChosen] = useState(null);
   useEffect(() => {
     const init = async () => {
       try {
@@ -23,13 +28,21 @@ function App() {
         // Get the contract instance.
         const networkId = await web3.eth.net.getId();
         const deployedNetwork = PokemonFactoryContract.networks[networkId];
+
+        const instance2 = new web3.eth.Contract(
+          PokemonFeedingContract.abi,
+          deployedNetwork && deployedNetwork.address
+        );
+
         const instance = new web3.eth.Contract(
           PokemonFactoryContract.abi,
           deployedNetwork && deployedNetwork.address
         );
+
         setWeb3(web3);
         setAccounts(accounts);
         setContract(instance);
+        setContract2(instance2);
       } catch (error) {
         alert('error , read console');
         console.log(error);
@@ -101,6 +114,10 @@ function App() {
       ._createPokemon(name, hp, attack, imgUrl)
       .send({ from: accounts[0] });
     alert('Create Successful');
+    getLoadMyPokemon();
+  };
+
+  const getLoadMyPokemon = async () => {
     const response = await contract.methods
       .getPokemonByOwner(accounts[0])
       .call();
@@ -127,6 +144,7 @@ function App() {
   }
 
   const showUpPokemon = el => {
+    setChosen(el);
     const element = (
       <div className="my-list-pkm">
         <img
@@ -153,6 +171,36 @@ function App() {
     );
   };
 
+  const DeclareBattle = async el => {
+    const res = await contract.methods
+      .attackEnemy(chosen.id, el.id)
+      .send({ from: accounts[0] });
+    console.log(res);
+    getLoadEnemyPokemons(enemyAddress);
+    getLoadMyPokemon();
+
+    //doan nay
+
+    const newChosen = await getPokemonDetail(chosen.id);
+    setChosen(newChosen);
+
+    const element = (
+      <div className="my-list-pkm">
+        <img
+          onClick={() => alert('readyToAttack')}
+          alt=""
+          src={chosen.imgUrl}
+          title="Choose this Pokemon"
+        ></img>
+
+        <h6>{chosen.name}</h6>
+        <p> HP : {chosen.hp}</p>
+        <p> Attack :{chosen.attack}</p>
+      </div>
+    );
+    setpokemonSrc(element);
+  };
+
   return (
     <div className="App">
       <div className="Menu">
@@ -169,7 +217,7 @@ function App() {
           return (
             <div className="my-list-pkm">
               <img
-                onClick={() => showUpPokemon(el)}
+                onClick={() => DeclareBattle(el)}
                 alt=""
                 src={el.imgUrl}
                 title="Choose this Pokemon"
